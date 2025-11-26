@@ -5,14 +5,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>intime</title>
-  
+
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
+
   <style>
     .scrollbar-hide::-webkit-scrollbar {
       display: none;
     }
-    
+
     .scrollbar-hide {
       -ms-overflow-style: none;
       scrollbar-width: none;
@@ -21,105 +22,116 @@
 </head>
 
 <body class="bg-gray-100 text-gray-800 min-h-screen flex items-center justify-center">
-  
+
+  <!-- DIALOG DO NOME -->
   <dialog id="nameDialog" class="backdrop:bg-black/50 p-0 rounded-xl shadow-xl">
     <form method="dialog" class="bg-white p-6 rounded-xl w-80 flex flex-col gap-4">
       <h2 class="font-semibold text-lg text-center">Digite seu nome</h2>
-      
-      <input id="dialogNameInput" placeholder="Seu nome..." class="w-full px-3 py-2 rounded-xl bg-gray-100 focus:outline-none" required />
-      
+
+      <input id="dialogNameInput" placeholder="Seu nome..."
+        class="w-full px-3 py-2 rounded-xl bg-gray-100 focus:outline-none" required />
+
       <button id="confirmNameBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-xl">
         Entrar no chat
       </button>
     </form>
   </dialog>
-  
+
+  <!-- CONTAINER DO CHAT -->
   <div class="w-full bg-white shadow-xl overflow-hidden flex flex-col" style="height:100vh;">
-    
+
+    <!-- HEADER -->
     <header class="flex items-center gap-4 p-4 border-b border-gray-200">
-      <div id="myAvatar" class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold bg-indigo-500">
+      <div id="myAvatar"
+        class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold bg-indigo-500">
         ?
       </div>
-      
+
       <div class="flex-1">
-        <div id="headerName" class="font-semibold">??????</div>
+        <div id="headerName" class="font-semibold text-lg">Carregando...</div>
+
         <div id="status" class="text-xs text-gray-500 flex items-center gap-1">
           <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
           Conectando...
         </div>
       </div>
     </header>
-    
-    <main id="messages" class="flex-1 p-4 overflow-y-auto scrollbar-hide"></main>
-    
+
+    <!-- MENSAGENS -->
+    <main id="messages" class="flex-1 p-4 overflow-y-auto scrollbar-hide bg-gray-50"></main>
+
+    <!-- INPUT -->
     <footer class="p-3 border-t border-gray-200">
       <form id="form" class="flex gap-3 items-center">
         <input id="user" type="hidden" required />
-        
-        <input id="text" autocomplete="off" placeholder="Escreva uma mensagem..." class="flex-1 rounded-xl px-4 py-3 bg-gray-100 focus:outline-none" required />
-        
-        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl">
+        <input id="text" autocomplete="off" placeholder="Escreva uma mensagem..."
+          class="flex-1 rounded-xl px-4 py-3 bg-gray-100 focus:outline-none" required />
+        <button type="submit"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl shadow-md">
           Enviar
         </button>
       </form>
     </footer>
-    
+
   </div>
-  
+
+  <!-- SOCKET.IO -->
   <script src="/socket.io/socket.io.js"></script>
-  
+
   <script>
     const socket = io();
-    
+
     const messagesEl = document.getElementById('messages');
     const form = document.getElementById('form');
     const userInput = document.getElementById('user');
     const textInput = document.getElementById('text');
+
     const avatarHeader = document.getElementById('myAvatar');
-    const headerName = document.getElementById("headerName");
-    const statusEl = document.getElementById("status");
-    
+    const headerName = document.getElementById('headerName');
+    const statusEl = document.getElementById('status');
+
     const nameDialog = document.getElementById("nameDialog");
     const dialogNameInput = document.getElementById("dialogNameInput");
     const confirmNameBtn = document.getElementById("confirmNameBtn");
-    
+
+    /* ------------------------------ NOME ------------------------------ */
     const savedName = localStorage.getItem("chatName");
-    
+
     if (savedName) {
-      userInput.value = savedName;
-      headerName.textContent = savedName;
-      avatarHeader.textContent = savedName.charAt(0).toUpperCase();
-      avatarHeader.style.background = nameToColor(savedName);
+      applyUserName(savedName);
     } else {
       nameDialog.showModal();
       dialogNameInput.focus();
     }
-    
+
     confirmNameBtn.addEventListener("click", () => {
       const name = dialogNameInput.value.trim();
       if (!name) return;
-      
       localStorage.setItem("chatName", name);
-      
+      applyUserName(name);
+      nameDialog.close();
+    });
+
+    function applyUserName(name) {
       userInput.value = name;
       headerName.textContent = name;
       avatarHeader.textContent = name.charAt(0).toUpperCase();
       avatarHeader.style.background = nameToColor(name);
-      
-      nameDialog.close();
-    });
-    
+    }
+
+    /* ------------------------------ STATUS ------------------------------ */
     function setStatus(text, colorClass) {
       statusEl.innerHTML = `
         <span class="w-2 h-2 rounded-full ${colorClass} animate-pulse"></span>
         ${text}
       `;
     }
-    
+
     setStatus("Conectando...", "bg-yellow-400");
-    socket.on("connect", () => setStatus("Conectado", "bg-green-500"));
+    socket.on("connect", () => setStatus("Online", "bg-green-500"));
     socket.on("disconnect", () => setStatus("Desconectado", "bg-red-500"));
-    
+
+    /* ------------------------------ FUNÇÕES DE COR/AVATAR ------------------------------ */
     function nameToColor(name) {
       let hash = 0;
       for (let i = 0; i < name.length; i++) {
@@ -128,10 +140,11 @@
       const hue = Math.abs(hash) % 360;
       return `hsl(${hue}, 70%, 50%)`;
     }
-    
+
     function getAvatarHtml(user) {
       const color = nameToColor(user);
       const letter = user.charAt(0).toUpperCase();
+
       return `
         <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-md"
              style="background:${color}">
@@ -139,82 +152,88 @@
         </div>
       `;
     }
-    
+
+    /* ------------------------------ HISTÓRICO LOCAL ------------------------------ */
     function saveMessage(msg) {
       let saved = JSON.parse(localStorage.getItem("chatMessages") || "[]");
       saved.push(msg);
       localStorage.setItem("chatMessages", JSON.stringify(saved));
     }
-    
+
     function loadLocalMessages() {
       let saved = JSON.parse(localStorage.getItem("chatMessages") || "[]");
       saved.forEach(renderMessage);
     }
-    
+
     loadLocalMessages();
-    
+
+    /* ------------------------------ HTML SAFE ------------------------------ */
     function escapeHtml(text) {
-      const div = document.createElement('div');
+      const div = document.createElement("div");
       div.textContent = text;
       return div.innerHTML;
     }
-    
+
+    /* ------------------------------ RENDERIZAÇÃO ------------------------------ */
     function renderMessage(m) {
       const isMe = m.user === userInput.value;
-      
-      const wrap = document.createElement('div');
-      wrap.className = `flex items-start gap-2 mb-4 ${isMe ? 'flex-row-reverse' : ''}`;
-      
-      const avatar = document.createElement('div');
+
+      const wrap = document.createElement("div");
+      wrap.className = `flex items-start gap-2 mb-4 ${isMe ? "flex-row-reverse" : ""}`;
+
+      const avatar = document.createElement("div");
       avatar.innerHTML = getAvatarHtml(m.user);
-      
-      const bubble = document.createElement('div');
-      bubble.className =
-        `max-w-[70%] p-3 rounded-2xl shadow-sm ` +
-        (isMe ?
-          'bg-indigo-600 text-white' :
-          'bg-gray-100 text-gray-800');
-      
+
+      const bubble = document.createElement("div");
+      bubble.className = `
+        max-w-[70%] p-3 rounded-2xl shadow-sm
+        ${isMe ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-800"}
+      `;
+
       const date = new Date(m.createdAt).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
+        hour: "2-digit",
+        minute: "2-digit",
       });
-      
+
       bubble.innerHTML = `
         <div class="font-semibold text-sm">${m.user}</div>
         <div>${escapeHtml(m.text)}</div>
         <div class="text-[11px] opacity-70 text-right mt-1">${date}</div>
       `;
-      
+
       wrap.appendChild(avatar);
       wrap.appendChild(bubble);
-      
+
       messagesEl.appendChild(wrap);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
-    
-    socket.on('history', (history) => {
-      messagesEl.innerHTML = '';
+
+    /* ------------------------------ SOCKET EVENTOS ------------------------------ */
+    socket.on("history", (history) => {
+      messagesEl.innerHTML = "";
       history.forEach(renderMessage);
     });
-    
-    socket.on('message:new', (msg) => {
+
+    socket.on("message:new", (msg) => {
       saveMessage(msg);
       renderMessage(msg);
     });
-    
-    form.addEventListener('submit', (e) => {
+
+    /* ------------------------------ ENVIO ------------------------------ */
+    form.addEventListener("submit", (e) => {
       e.preventDefault();
+
       const user = userInput.value.trim();
       const text = textInput.value.trim();
       if (!user || !text) return;
-      
-      socket.emit('message:send', { user, text });
-      textInput.value = '';
+
+      socket.emit("message:send", { user, text });
+
+      textInput.value = "";
       textInput.focus();
     });
   </script>
-  
+
 </body>
 
 </html>
