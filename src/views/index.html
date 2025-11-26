@@ -23,7 +23,6 @@
 
 <body class="bg-gray-100 text-gray-800 min-h-screen flex items-center justify-center">
 
-  <!-- DIALOG DO NOME -->
   <dialog id="nameDialog" class="backdrop:bg-black/50 p-0 rounded-xl shadow-xl">
     <form method="dialog" class="bg-white p-6 rounded-xl w-80 flex flex-col gap-4">
       <h2 class="font-semibold text-lg text-center">Digite seu nome</h2>
@@ -37,10 +36,8 @@
     </form>
   </dialog>
 
-  <!-- CONTAINER DO CHAT -->
   <div class="w-full bg-white shadow-xl overflow-hidden flex flex-col" style="height:100vh;">
 
-    <!-- HEADER -->
     <header class="flex items-center gap-4 p-4 border-b border-gray-200">
       <div id="myAvatar"
         class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold bg-indigo-500">
@@ -57,10 +54,8 @@
       </div>
     </header>
 
-    <!-- MENSAGENS -->
     <main id="messages" class="flex-1 p-4 overflow-y-auto scrollbar-hide bg-gray-50"></main>
 
-    <!-- INPUT -->
     <footer class="p-3 border-t border-gray-200">
       <form id="form" class="flex gap-3 items-center">
         <input id="user" type="hidden" required />
@@ -75,7 +70,6 @@
 
   </div>
 
-  <!-- SOCKET.IO -->
   <script src="/socket.io/socket.io.js"></script>
 
   <script>
@@ -94,7 +88,6 @@
     const dialogNameInput = document.getElementById("dialogNameInput");
     const confirmNameBtn = document.getElementById("confirmNameBtn");
 
-    /* ------------------------------ NOME ------------------------------ */
     const savedName = localStorage.getItem("chatName");
 
     if (savedName) {
@@ -119,7 +112,6 @@
       avatarHeader.style.background = nameToColor(name);
     }
 
-    /* ------------------------------ STATUS ------------------------------ */
     function setStatus(text, colorClass) {
       statusEl.innerHTML = `
         <span class="w-2 h-2 rounded-full ${colorClass} animate-pulse"></span>
@@ -131,7 +123,6 @@
     socket.on("connect", () => setStatus("Online", "bg-green-500"));
     socket.on("disconnect", () => setStatus("Desconectado", "bg-red-500"));
 
-    /* ------------------------------ FUNÇÕES DE COR/AVATAR ------------------------------ */
     function nameToColor(name) {
       let hash = 0;
       for (let i = 0; i < name.length; i++) {
@@ -153,7 +144,6 @@
       `;
     }
 
-    /* ------------------------------ HISTÓRICO LOCAL ------------------------------ */
     function saveMessage(msg) {
       let saved = JSON.parse(localStorage.getItem("chatMessages") || "[]");
       saved.push(msg);
@@ -167,14 +157,12 @@
 
     loadLocalMessages();
 
-    /* ------------------------------ HTML SAFE ------------------------------ */
     function escapeHtml(text) {
       const div = document.createElement("div");
       div.textContent = text;
       return div.innerHTML;
     }
 
-    /* ------------------------------ RENDERIZAÇÃO ------------------------------ */
     function renderMessage(m) {
       const isMe = m.user === userInput.value;
 
@@ -208,7 +196,6 @@
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    /* ------------------------------ SOCKET EVENTOS ------------------------------ */
     socket.on("history", (history) => {
       messagesEl.innerHTML = "";
       history.forEach(renderMessage);
@@ -219,7 +206,6 @@
       renderMessage(msg);
     });
 
-    /* ------------------------------ ENVIO ------------------------------ */
     form.addEventListener("submit", (e) => {
       e.preventDefault();
 
