@@ -27,19 +27,20 @@
     <form method="dialog" class="bg-white p-6 rounded-xl w-80 flex flex-col gap-4">
       <h2 class="font-semibold text-lg text-center">Digite seu nome</h2>
 
-      <input id="dialogNameInput" 
-             placeholder="Seu nome..." 
-             class="w-full px-3 py-2 rounded-xl bg-gray-100 focus:outline-none" 
+      <input id="dialogNameInput"
+             placeholder="Seu nome..."
+             class="w-full px-3 py-2 rounded-xl bg-gray-100 focus:outline-none"
              required />
 
-      <button id="confirmNameBtn" 
+      <button id="confirmNameBtn"
               class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-xl">
         Entrar no chat
       </button>
     </form>
   </dialog>
 
-  <div class="w-full max-w-3xl bg-white shadow-xl overflow-hidden flex flex-col" style="height:100vh;">
+  <!-- CHAT 100% LARGURA -->
+  <div class="w-full bg-white shadow-xl overflow-hidden flex flex-col" style="height:100vh;">
 
     <header class="flex items-center gap-4 p-4 border-b border-gray-200">
       <div id="myAvatar" class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold bg-indigo-500">
@@ -65,7 +66,7 @@
         <input id="user" type="hidden" required />
 
         <input id="text" autocomplete="off" placeholder="Escreva uma mensagem..."
-          class="flex-1 rounded-xl px-4 py-3 bg-gray-100 focus:outline-none" required />
+               class="flex-1 rounded-xl px-4 py-3 bg-gray-100 focus:outline-none" required />
 
         <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl">
           Enviar
@@ -92,14 +93,27 @@
     const dialogNameInput = document.getElementById("dialogNameInput");
     const confirmNameBtn = document.getElementById("confirmNameBtn");
 
-    /* ==== ABRE O DIALOG AUTOMATICAMENTE ==== */
-    nameDialog.showModal();
-    dialogNameInput.focus();
+    /* =======================================================
+       CARREGAR NOME SE JÁ FOI SALVO
+       ======================================================= */
+    const savedName = localStorage.getItem("chatName");
 
-    /* Confirmação do nome */
+    if (savedName) {
+      userInput.value = savedName;
+      headerName.textContent = savedName;
+      avatarHeader.textContent = savedName.charAt(0).toUpperCase();
+      avatarHeader.style.background = nameToColor(savedName);
+    } else {
+      nameDialog.showModal();
+      dialogNameInput.focus();
+    }
+
+    /* CONFIRMAR NOME */
     confirmNameBtn.addEventListener("click", () => {
       const name = dialogNameInput.value.trim();
       if (!name) return;
+
+      localStorage.setItem("chatName", name);
 
       userInput.value = name;
       headerName.textContent = name;
@@ -109,7 +123,9 @@
       nameDialog.close();
     });
 
-    /* ==== Status ==== */
+    /* =======================================================
+       STATUS
+       ======================================================= */
     function setStatus(text, colorClass) {
       statusEl.innerHTML = `
         <span class="w-2 h-2 rounded-full ${colorClass} animate-pulse"></span>
@@ -121,6 +137,10 @@
     socket.on("connect", () => setStatus("Conectado", "bg-green-500"));
     socket.on("disconnect", () => setStatus("Desconectado", "bg-red-500"));
 
+
+    /* =======================================================
+       AVATAR / CORES
+       ======================================================= */
     function nameToColor(name) {
       let hash = 0;
       for (let i = 0; i < name.length; i++) {
@@ -141,6 +161,23 @@
       `;
     }
 
+    /* =======================================================
+       LOCAL STORAGE DAS MENSAGENS
+       ======================================================= */
+
+    function saveMessage(msg) {
+      let saved = JSON.parse(localStorage.getItem("chatMessages") || "[]");
+      saved.push(msg);
+      localStorage.setItem("chatMessages", JSON.stringify(saved));
+    }
+
+    function loadLocalMessages() {
+      let saved = JSON.parse(localStorage.getItem("chatMessages") || "[]");
+      saved.forEach(renderMessage);
+    }
+
+    loadLocalMessages();
+
     /* Escape HTML */
     function escapeHtml(text) {
       const div = document.createElement('div');
@@ -148,7 +185,7 @@
       return div.innerHTML;
     }
 
-    /* Renderiza mensagens */
+    /* Renderizar mensagens */
     function renderMessage(m) {
       const isMe = m.user === userInput.value;
 
@@ -183,15 +220,19 @@
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    /* Histórico vindo do servidor */
     socket.on('history', (history) => {
       messagesEl.innerHTML = '';
       history.forEach(renderMessage);
     });
 
+    /* Quando chega nova mensagem */
     socket.on('message:new', (msg) => {
+      saveMessage(msg);
       renderMessage(msg);
     });
 
+    /* Enviar mensagem */
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const user = userInput.value.trim();
@@ -202,6 +243,7 @@
       textInput.value = '';
       textInput.focus();
     });
+
   </script>
 
 </body>
