@@ -1,26 +1,57 @@
 <!doctype html>
-<html>
+<html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <title>Chat em Tempo Real</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chat Moderno — Avatares Automáticos</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; max-width:800px;margin:20px auto; }
-    #messages { border:1px solid #ddd; padding:10px; height:400px; overflow:auto; }
-    .msg { margin-bottom:8px; }
-    .meta { font-size:0.85em; color:#666; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body>
-  <h1>Chat em Tempo Real</h1>
-  <div id="messages"></div>
 
-  <form id="form">
-    <input id="user" placeholder="Seu nome" required />
-    <input id="text" placeholder="Mensagem..." required />
-    <button>Enviar</button>
-  </form>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex items-center justify-center">
+
+  <div class="w-full max-w-3xl bg-white shadow-xl overflow-hidden flex flex-col" style="height:100vh;">
+
+    <!-- Header -->
+    <header class="flex items-center gap-4 p-4 border-b border-gray-200">
+      <div id="myAvatar" class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold bg-indigo-500">
+        ?
+      </div>
+      <div class="flex-1">
+        <div class="font-semibold">Chat em Tempo Real</div>
+        <div class="text-xs text-gray-500">Conectado • Socket.io</div>
+      </div>
+    </header>
+
+    <!-- Messages -->
+    <main id="messages" class="flex-1 p-4 overflow-y-auto scrollbar-hide"></main>
+
+    <!-- Composer -->
+    <footer class="p-3 border-t border-gray-200">
+      <form id="form" class="flex gap-3 items-center">
+        <input id="user" placeholder="Seu nome"
+               class="px-3 py-2 rounded-xl bg-gray-200"
+               required />
+
+        <input id="text" autocomplete="off" placeholder="Escreva uma mensagem..."
+               class="flex-1 rounded-xl px-4 py-3 bg-gray-100 focus:outline-none"
+               required />
+
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl">
+          Enviar
+        </button>
+      </form>
+    </footer>
+
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
+
   <script>
     const socket = io();
 
@@ -28,34 +59,110 @@
     const form = document.getElementById('form');
     const userInput = document.getElementById('user');
     const textInput = document.getElementById('text');
+    const avatarHeader = document.getElementById('myAvatar');
+
+    /* ==== Avatar automático ==== */
+
+    // gera cor fixa a partir do nome
+    function nameToColor(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const hue = Math.abs(hash) % 360;
+      return `hsl(${hue}, 70%, 50%)`;
+    }
+
+    // gera avatar com inicial
+    function getAvatarHtml(user) {
+      const color = nameToColor(user);
+      const letter = user.charAt(0).toUpperCase();
+      return `
+        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-md"
+             style="background:${color}">
+          ${letter}
+        </div>
+      `;
+    }
+
+    // Atualiza avatar do header automaticamente conforme digita o nome
+    userInput.addEventListener('input', () => {
+      const name = userInput.value.trim();
+      if (!name) {
+        avatarHeader.textContent = '?';
+        avatarHeader.style.background = '#6366f1';
+      } else {
+        avatarHeader.textContent = name.charAt(0).toUpperCase();
+        avatarHeader.style.background = nameToColor(name);
+      }
+    });
+
+    /* ==== Chat ==== */
+
+    function escapeHtml(text){
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
 
     function renderMessage(m) {
-      const div = document.createElement('div');
-      div.className = 'msg';
-      const date = new Date(m.createdAt).toLocaleTimeString();
-      div.innerHTML = `<strong>${m.user}</strong> <span class="meta">[${date}]</span>: ${m.text}`;
-      messagesEl.appendChild(div);
+      const isMe = m.user === userInput.value;
+
+      const wrap = document.createElement('div');
+      wrap.className = `flex items-start gap-2 mb-4 ${isMe ? 'flex-row-reverse' : ''}`;
+
+      const avatar = document.createElement('div');
+      avatar.innerHTML = getAvatarHtml(m.user);
+
+      const bubble = document.createElement('div');
+      bubble.className =
+        `max-w-[70%] p-3 rounded-2xl shadow-sm ` +
+        (isMe
+          ? 'bg-indigo-600 text-white rounded-br-md'
+          : 'bg-gray-100 text-gray-800 rounded-bl-md');
+
+      const date = new Date(m.createdAt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      bubble.innerHTML = `
+        <div class="font-semibold text-sm">${m.user}</div>
+        <div>${escapeHtml(m.text)}</div>
+        <div class="text-[11px] opacity-70 text-right mt-1">${date}</div>
+      `;
+
+      wrap.appendChild(avatar);
+      wrap.appendChild(bubble);
+
+      messagesEl.appendChild(wrap);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    /* Histórico */
     socket.on('history', (history) => {
       messagesEl.innerHTML = '';
       history.forEach(renderMessage);
     });
 
-    socket.on('message:new', (message) => {
-      renderMessage(message);
+    /* Nova mensagem */
+    socket.on('message:new', (msg) => {
+      renderMessage(msg);
     });
 
+    /* Enviar mensagem */
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const user = userInput.value.trim();
       const text = textInput.value.trim();
       if (!user || !text) return;
+
       socket.emit('message:send', { user, text });
       textInput.value = '';
       textInput.focus();
     });
+
   </script>
+
 </body>
 </html>
