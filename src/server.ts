@@ -2,10 +2,13 @@ import express from "express";
 import http from "http";
 import { Server as IOServer } from "socket.io";
 import { router, service as chatService } from "./routes";
+import path from "path";
 
 const app = express();
 const server = http.createServer(app);
 const io = new IOServer(server);
+
+app.use(express.static(path.join(__dirname, "..", "public")));
 
 app.use(router);
 

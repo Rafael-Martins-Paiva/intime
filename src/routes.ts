@@ -11,10 +11,12 @@ const controller = new ChatController(service);
 
 const router = Router();
 
-app.use(express.static(path.join(__dirname, "..", "public")));
-
 router.get("/api/history", controller.getHistory.bind(controller));
-router.post("/api/messages", express.json(), controller.postMessage.bind(controller));
+router.post(
+  "/api/messages",
+  express.json(),
+  controller.postMessage.bind(controller)
+);
 router.delete("/api/history", controller.clear.bind(controller));
 
 router.get("/", (req, res) => {
