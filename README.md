@@ -11,7 +11,7 @@
 
 # intime
 
-Este projeto é um simples chat room, usando express.
+> Este projeto é um simples chat room, usando express.
 
 ## comandos para baixar o projeto
 
