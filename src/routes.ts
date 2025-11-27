@@ -20,7 +20,7 @@ router.post(
 router.delete("/api/history", controller.clear.bind(controller));
 
 router.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "views", "index.html"));
+  res.sendFile(path.join(__dirname, "views", "index.html"));
 });
 
 export { router, service };
